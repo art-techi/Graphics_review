@@ -1,4 +1,4 @@
-/* Writing some new shaders
+/* Put some textures on our rectangle
     Author: Meg Coleman
     Updated: May 31, 2020
     
