@@ -1,6 +1,8 @@
 /* Create a simple window using GLFW, draw a triangle
     Author: Meg Coleman
-    Updated: May 29, 2020
+    Updated: May 30, 2020
+
+    Review based on information from https://learnopengl.com/Introduction
 */
 //#define GLFW_INCLUDE_GLCOREARB
 #include <GL/glew.h> //openGL functions
