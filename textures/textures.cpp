@@ -5,9 +5,11 @@
     Review based on information from https://learnopengl.com/Introduction
 */
 //#define GLFW_INCLUDE_GLCOREARB
+#define STB_IMAGE_IMPLEMENTATION
 #include <GL/glew.h> //openGL functions
 #include <GLFW/glfw3.h> //window functions
 #include "shader.h" 
+#include "stb_image.h"
 //#include <stdio.h> //fprintf
 #include <iostream> //std::cout
 #include <cmath>
@@ -85,15 +87,22 @@ int main(int argc, char** argv)
     float vertices[] = {
         /* there are four vertices due to overlap 
            essentially two triangles to make the one rectangle */
-        0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f,
-        0.5f, -0.5f, 0.0f, 0.5f, 0.0f, 1.0f,
-        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
-        -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f
+        0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f,  // top right
+        0.5f, -0.5f, 0.0f, 0.5f, 0.0f, 1.0f, // bottom right
+        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom left
+        -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, // top left
     };
     /* indices for ebo */
     unsigned int indices[] = {
         0, 1, 3, // triangle 1
         1, 2, 3 // triangle 2
+    };
+
+    float texCoords[] = {
+        1.0f, 1.0f,
+        1.0f, 0.0f,
+        0.0f, 0.0f,
+        0.0f, 1.0f    
     };
 
     //================================== VAO ==============================================
@@ -124,12 +133,50 @@ int main(int argc, char** argv)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    
+    //=================================== VBO TEX COORDS ===============================
+    unsigned int texVBO;
+    glGenBuffers(1, &texVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, texVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
+
+    /* add pointer for texture attribute */
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(2);
+
     /* now load the shader defined in shader.h */
-    Shader myShader("shaders/shader.vs", "shaders/shader.fs");
+    Shader myShader("textures/shader.vs", "textures/shader.fs");
+
+    /* generate and bind texture */
+    unsigned int texture; // texture ID
+    glGenTextures(1, &texture);
+    glActiveTexture(GL_TEXTURE1); 
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    /* set wraping options */
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    /* retrieve texture from file */
+    int texWidth, texHeight, nrChannels;
+    unsigned char *data = stbi_load("textures/woodtexture.jpeg", &texWidth, &texHeight, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else 
+    {
+        std::cerr << "FAILED TO LOAD TEXTURE " << std::endl;
+
+    }
+    
+    glBindTexture(GL_TEXTURE_2D, 0); // unbind 
+    stbi_image_free(data); // free up memory
     
     /* wireframe mode set */
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     //================================= RENDER ============================================
     /* keep the window open */
     while(!glfwWindowShouldClose(myWindow))
@@ -143,18 +190,21 @@ int main(int argc, char** argv)
         myShader.use(); 
         glBindVertexArray(VAO);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBindTexture(GL_TEXTURE_2D, texture);
         
-        float timeValue = glfwGetTime();
-        float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
-        int vertexColorLocation = glGetUniformLocation(myShader.ID, "vertexColor");
-        glUniform4f(vertexColorLocation, greenValue, greenValue, greenValue, 1.0f);
-
+        glActiveTexture(GL_TEXTURE1);
+        //float timeValue = glfwGetTime();
+        //float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
+        int vertexColorLocation = glGetUniformLocation(myShader.ID, "myTexture");
+        //glUniform4f(vertexColorLocation, greenValue, greenValue, greenValue, 1.0f);
+        glUniform1i(vertexColorLocation, 1);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
-        /* unbind the EBO, VAO and program */
+        /* unbind objects */
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
         glUseProgram(0);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
         
         /* swap back buffer with buffer user sees on screen */
