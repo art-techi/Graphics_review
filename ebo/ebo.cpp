@@ -1,4 +1,4 @@
-/* Create a simple window using GLFW
+/* Create a simple window using GLFW, draw a wireframe rectangle
     Author: Meg Coleman
     Updated: May 29, 2020
 */
@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     std::cout << "GL version: " << glGetString(GL_VERSION) << std::endl;
 
     std::cout << "GLFW version: " << glfwGetVersionString() <<std::endl;
-   
+
     /* create render window */
     /* for mac, we have to get the frame buffer size or it will not match correctly */
     int width, height; 
@@ -191,8 +191,8 @@ int main(int argc, char** argv)
  
 
     
-
-
+    /* wireframe mode set */
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     //================================= RENDER ============================================
     /* keep the window open */
     while(!glfwWindowShouldClose(myWindow))

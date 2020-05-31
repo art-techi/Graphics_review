@@ -1,4 +1,4 @@
-/* Create a simple window using GLFW, draw a triangle
+/* Writing some new shaders
     Author: Meg Coleman
     Updated: May 29, 2020
 */
@@ -60,7 +60,12 @@ int main(int argc, char** argv)
     std::cout << "GL version: " << glGetString(GL_VERSION) << std::endl;
 
     std::cout << "GLFW version: " << glfwGetVersionString() <<std::endl;
-   
+
+    // check number of vertext attributes supported by hardware 
+    int nrAttributes;
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
+    std::cout << "Maximum nr of vertex attributes supported: " << nrAttributes << std::endl;
+    
     /* create render window */
     /* for mac, we have to get the frame buffer size or it will not match correctly */
     int width, height; 
@@ -72,11 +77,19 @@ int main(int argc, char** argv)
     /* set colour buffer will be cleared with */
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f); //clear with
 
-    /* set up a triangle --notice counter clockwise -right hand rule */
+    /* set up a rectangle */
     float vertices[] = {
-        -0.5f, -0.5f, 0.0f,
+        // there are four vertices due to overlap 
+        // essentially two triangles to make the one rectangle 
+        0.5f, 0.5f, 0.0f,
         0.5f, -0.5f, 0.0f,
-        0.0f, 0.5f, 0.0f
+        -0.5f, -0.5f, 0.0f,
+        -0.5f, 0.5f, 0.0f,
+    };
+    /* indices for ebo */
+    unsigned int indices[] = {
+        0, 1, 3, // triangle 1
+        1, 2, 3 // triangle 2
     };
 
     //================================== VAO ==============================================
@@ -98,17 +111,24 @@ int main(int argc, char** argv)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0); // data at location 0
     glEnableVertexAttribArray(0); 
 
+    //=================================== EBO =========================================
+    /* set up EBO */
+    unsigned int EBO;
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
     //============================= VERTEX SHADER =====================================
     /* create a basic vertex shader and compile it */
     // source code
     const char *vertexShaderSource = 
         "#version 330 core\n"
         "layout (location = 0) in vec3 aPos;\n"
-        "out vec3 color;\n"
+        "out vec4 vertexColor;\n"
         "void main()\n"
         "{\n"
         "   gl_Position = vec4(aPos, 1.0);\n"
-        "   color = aPos;\n"
+        "   vertexColor = vec4(aPos, 1.0);\n"
         "}";
     // create a vertex shader
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -132,11 +152,11 @@ int main(int argc, char** argv)
     /* create a basic fragment (pixel) shader and compile it */
     const char *fragmentShaderSource =
         "#version 330 core\n" 
-        "in vec3 color;\n"
+        "in vec4 vertexColor;\n"
         "out vec4 FragColor;\n"
         "void main()\n"
         "{\n"
-        "   FragColor = vec4(sin(color) + vec3(0.7), 1.0f);\n"
+        "   FragColor = sin(vertexColor) + vec4(0.7, 0.7, 0.7, 0.0);\n"
         "   //FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
         "}";
 
@@ -176,8 +196,8 @@ int main(int argc, char** argv)
  
 
     
-
-
+    /* wireframe mode set */
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     //================================= RENDER ============================================
     /* keep the window open */
     while(!glfwWindowShouldClose(myWindow))
@@ -190,7 +210,14 @@ int main(int argc, char** argv)
 
         glUseProgram(shaderProgram); //now render
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        
+        /* unbind the EBO, VAO and program */
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+        glUseProgram(0);
+
         
         /* swap back buffer with buffer user sees on screen */
         glfwSwapBuffers(myWindow);
@@ -217,4 +244,5 @@ void processInput(GLFWwindow *window)
         /* close GLFW */
         glfwSetWindowShouldClose(window, true);
 }
+
 
